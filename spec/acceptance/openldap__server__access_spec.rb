@@ -7,9 +7,10 @@ describe 'openldap::server::access' do
       pp = <<-EOS
         class { 'openldap::server': }
         ::openldap::server::access { 'admin':
-          what   => 'attrs=userPassword,shadowLastChange',
-          by     => 'dn="cn=admin,dc=example,dc=com"',
-          suffix => 'dc=example,dc=com',
+          position => 0,
+          what     => 'attrs=userPassword,shadowLastChange',
+          access   => 'dn="cn=admin,dc=example,dc=com"',
+          suffix   => 'dc=example,dc=com',
         }
       EOS
 

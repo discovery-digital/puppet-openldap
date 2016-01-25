@@ -15,10 +15,6 @@ Puppet::Type.newtype(:openldap_access) do
     desc "The entries and/or attributes to which the access applies"
   end
 
-  newparam(:by, :namevar => true) do
-    desc "To whom the access applies"
-  end
-
   newparam(:suffix, :namevar => true) do
     desc "The suffix to which the access applies"
   end
@@ -26,20 +22,20 @@ Puppet::Type.newtype(:openldap_access) do
   def self.title_patterns
     [
       [
-        /^(to\s+(\S+)\s+by\s+(.+)\s+on\s+(.+))$/,
+        /^(\{(\d+)\}to\s+(\S+)\s+on\s+(\S+))$/,
         [
           [ :name, lambda{|x| x} ],
+          [ :position, lambda{|x| x} ],
           [ :what, lambda{|x| x} ],
-          [ :by, lambda{|x| x} ],
           [ :suffix, lambda{|x| x} ],
         ],
       ],
       [
-        /^(to\s+(\S+)\s+by\s+(.+))$/,
+        /^(to\s+(\S+)\s+on\s+(\S+))$/,
         [
           [ :name, lambda{|x| x} ],
           [ :what, lambda{|x| x} ],
-          [ :by, lambda{|x| x} ],
+          [ :suffix, lambda{|x| x} ],
         ],
       ],
       [
@@ -51,16 +47,14 @@ Puppet::Type.newtype(:openldap_access) do
     ]
   end
 
-  newparam(:position) do
+  newparam(:position, :namevar => true) do
     desc "Where to place the new entry"
   end
 
-  newproperty(:access) do
-    desc "Access rule."
-  end
-
-  newproperty(:control) do
-    desc "Control rule."
+  newproperty(:access, :array_matching => :all) do
+    validate do |access|
+      raise Puppet::Error, 'access should be an array of strings' unless [ String ].include? access.class
+    end
   end
 
   autorequire(:openldap_database) do
