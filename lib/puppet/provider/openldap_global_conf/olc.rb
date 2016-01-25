@@ -17,15 +17,24 @@ Puppet::Type.type(:openldap_global_conf).provide(:olc) do
       '-H',
       'ldap:///???(objectClass=olcGlobal)'
     )
+    values = {}
+    i = []
     items.gsub("\n ", "").split("\n").select{|e| e =~ /^olc/}.collect do |line|
-      name, value = line.split(': ')
-      # initialize @property_hash
-      new(
-        :name   => name[3, name.length],
+      name, value = line.match(/^olc(.+): (?:\{[-\d]+\})?(.+)$/).captures
+      values[name] = [] unless values[name].is_a? Array
+      values[name] << value
+    end
+
+    # initialize @property_hash
+    values.each do |name, value|
+      i << new(
+        :name   => name,
         :ensure => :present,
         :value  => value
       )
     end
+
+    i
   end
 
   def self.prefetch(resources)
@@ -38,25 +47,15 @@ Puppet::Type.type(:openldap_global_conf).provide(:olc) do
   end
 
   def exists?
-    if resource[:value].is_a? Hash
-      (resource[:value].keys - self.class.instances.map { |item| item.name }).empty?
-    else
-      @property_hash[:ensure] == :present
-    end
+    @property_hash[:ensure] == :present
   end
 
   def create
     t = Tempfile.new('openldap_global_conf')
     t << "dn: cn=config\n"
-    if resource[:value].is_a? Hash
-      resource[:value].each do |k, v|
-        t << "add: olc#{k}\n"
-        t << "olc#{k}: #{v}\n"
-        t << "-\n"
-      end
-    else
-      t << "add: olc#{resource[:name]}\n"
-      t << "olc#{resource[:name]}: #{resource[:value]}\n"
+    t << "add: olc#{resource[:name]}\n"
+    resource[:value].each do |v|
+      t << "olc#{resource[:name]}: #{v}\n"
     end
     t.close
     Puppet.debug(IO.read t.path)
@@ -71,14 +70,7 @@ Puppet::Type.type(:openldap_global_conf).provide(:olc) do
   def destroy
     t = Tempfile.new('openldap_global_conf')
     t << "dn: cn=config\n"
-    if resource[:value].is_a? Hash
-      resource[:value].keys.each do |k|
-        t << "delete: olc#{k}\n"
-        t << "-\n"
-      end
-    else
-      t << "delete: olc#{name}\n"
-    end
+    t << "delete: olc#{name}\n"
     t.close
     Puppet.debug(IO.read t.path)
     begin
@@ -90,30 +82,13 @@ Puppet::Type.type(:openldap_global_conf).provide(:olc) do
   end
 
   def value
-    if resource[:value].is_a? Hash
-      instances = self.class.instances
-      values = resource[:value].map do |k, v|
-        [ k, instances.find { |item| item.name == k }.get(:value) ]
-      end
-      Hash[values]
-    else
-      @property_hash[:value]
-    end
+    @property_hash[:value]
   end
 
   def value=(value)
     t = Tempfile.new('openldap_global_conf')
     t << "dn: cn=config\n"
-    if resource[:value].is_a? Hash
-      resource[:value].each do |k, v|
-        t << "replace: olc#{k}\n"
-        t << "olc#{k}: #{v}\n"
-        t << "-\n"
-      end
-    else
-      t << "replace: olc#{name}\n"
-      t << "olc#{name}: #{value}\n"
-    end
+    t << "replace: olc#{name}\n" + value.collect { |x| "olc#{resource[:name]}: #{x}" }.join("\n")
     t.close
     Puppet.debug(IO.read t.path)
     begin
