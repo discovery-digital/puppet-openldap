@@ -10,10 +10,10 @@ Puppet::Type.
 
   mk_resource_methods
 
-  def self.instances
+  def self.instances(confdir)
     # TODO: restict to bdb and hdb
     i = []
-    slapcat('(olcDbIndex=*)').split("\n\n").collect do |paragraph|
+    slapcat('-F', confdir, '(olcDbIndex=*)').split("\n\n").collect do |paragraph|
       suffix = nil
       attrlist = nil
       indices = nil
@@ -30,7 +30,8 @@ Puppet::Type.
               :ensure    => :present,
               :attribute => attribute,
               :suffix    => suffix,
-              :indices   => indices
+              :indices   => indices,
+              :confdir   => confdir
             )
           }
         end
@@ -40,7 +41,7 @@ Puppet::Type.
   end
 
   def self.prefetch(resources)
-    dbindexes = instances
+    dbindexes = instances(resources.first[1]["confdir"])
     resources.keys.each do |name|
       if provider = dbindexes.find{ |access|
         access.attribute == resources[name][:attribute] && access.suffix == resources[name][:suffix]
@@ -51,7 +52,7 @@ Puppet::Type.
   end
 
   def getDn(suffix)
-    slapcat("(olcSuffix=#{suffix})").split("\n").collect do |line|
+    slapcat('-F', resource[:confdir], "(olcSuffix=#{suffix})").split("\n").collect do |line|
       if line =~ /^dn: /
         return line.split(' ')[1]
       end
@@ -101,7 +102,7 @@ Puppet::Type.
 
   def getCurrentOlcDbIndex(suffix)
     i = []
-    slapcat("(olcDbIndex=*)", getDn(suffix)).split("\n\n").collect do |paragraph|
+    slapcat('-F', resource[:confdir], "(olcDbIndex=*)", getDn(suffix)).split("\n\n").collect do |paragraph|
       paragraph.gsub("\n ", '').split("\n").collect do |line|
         case line
         when /^olcDbIndex: /

@@ -63,6 +63,10 @@ Puppet::Type.newtype(:openldap_access) do
     desc "Control rule."
   end
 
+  newproperty(:confdir) do
+    desc "Openldap config directory."
+  end
+
   autorequire(:openldap_database) do
     [ value(:suffix) ]
   end

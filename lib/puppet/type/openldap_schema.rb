@@ -14,4 +14,7 @@ Puppet::Type.newtype(:openldap_schema) do
     end
   end
 
+  newproperty(:confdir) do
+    desc "Openldap config directory."
+  end
 end

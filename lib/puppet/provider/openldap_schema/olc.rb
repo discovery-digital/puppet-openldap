@@ -10,9 +10,9 @@ Puppet::Type.
 
   mk_resource_methods
 
-  def self.instances
+  def self.instances(confdir)
     schemas = []
-    slapcat('(objectClass=olcSchemaConfig)').split("\n\n").each do |paragraph|
+    slapcat('-F', confdir, '(objectClass=olcSchemaConfig)').split("\n\n").each do |paragraph|
       paragraph.split("\n").each do |line|
         if line =~ /^cn: \{/
           schemas.push line
@@ -23,7 +23,8 @@ Puppet::Type.
     names.map { |schema|
       new(
         :ensure => :present,
-        :name		=> schema
+        :name    => schema,
+        :confdir => confdir
       )
     }
   end
@@ -54,7 +55,7 @@ Puppet::Type.
   end
 
   def self.prefetch(resources)
-    existing = instances
+    existing = instances(resources.first[1]["confdir"])
     resources.keys.each do |name|
       if provider = existing.find { |r| r.name == name }
         resources[name].provider = provider

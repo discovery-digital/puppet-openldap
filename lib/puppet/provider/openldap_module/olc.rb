@@ -27,8 +27,8 @@ Puppet::Type.
     end
   end
 
-  def self.instances
-    dn = slapcat('(objectClass=olcModuleList)')
+  def self.instances(confdir)
+    dn = slapcat('-F', confdir, '(objectClass=olcModuleList)')
     create_module_list() if dn.empty?
 
     i = []
@@ -40,7 +40,8 @@ Puppet::Type.
         when /^olcModuleLoad: /
           i << new(
             :ensure => :present,
-            :name   => line.match(/^olcModuleLoad: \{\d+\}([^\.]+).*$/).captures[0]
+            :name   => line.match(/^olcModuleLoad: \{\d+\}([^\.]+).*$/).captures[0],
+            :confdir => confdir
           )
 	end
       end
@@ -49,7 +50,7 @@ Puppet::Type.
   end
 
   def self.prefetch(resources)
-    mods = instances
+    mods = instances(resources.first[1]["confdir"])
     resources.keys.each do |name|
       if provider = mods.find{ |mod| mod.name == name }
         resources[name].provider = provider

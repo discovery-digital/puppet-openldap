@@ -62,6 +62,7 @@ define openldap::server::database(
     suffix          => $suffix,
     provider        => $::openldap::server::provider,
     target          => $::openldap::server::conffile,
+    confdir         => $::openldap::server::confdir,
     backend         => $backend,
     directory       => $manage_directory,
     rootdn          => $rootdn,

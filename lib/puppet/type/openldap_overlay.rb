@@ -46,5 +46,8 @@ Puppet::Type.newtype(:openldap_overlay) do
     desc "Overlay options."
   end
 
+  newproperty(:confdir) do
+    desc "Openldap config directory."
+  end
 end
 

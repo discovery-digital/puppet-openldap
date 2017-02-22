@@ -10,10 +10,10 @@ Puppet::Type.
 
   mk_resource_methods
 
-  def self.instances
+  def self.instances(confdir)
     # TODO: restict to bdb, hdb and globals
     i = []
-    slapcat('(olcAccess=*)').split("\n\n").collect do |paragraph|
+    slapcat('-F', confdir, '(olcAccess=*)').split("\n\n").collect do |paragraph|
       access = nil
       suffix = nil
       position = nil
@@ -38,6 +38,21 @@ Puppet::Type.
               :control  => control
             )
           }
+          if (position.to_i + 1) == getCountOfOlcAccess(suffix)
+            islast = true
+          else
+            islast = false
+          end
+          i << new(
+            :name     => "{#{position}}to #{what} #{access.join(' ')} on #{suffix}",
+            :ensure   => :present,
+            :position => position,
+            :what     => what,
+            :access   => access,
+            :suffix   => suffix,
+            :islast   => islast,
+            :confdir  => confdir
+          )
         end
       end
     end
@@ -46,7 +61,7 @@ Puppet::Type.
   end
 
   def self.prefetch(resources)
-    accesses = instances
+    accesses = instances(resources.first[1]["confdir"])
     resources.keys.each do |name|
       if provider = accesses.find{ |access|
         access.what == resources[name][:what] &&
@@ -64,13 +79,13 @@ Puppet::Type.
     elsif suffix == 'cn=config'
       return 'olcDatabase={0}config,cn=config'
     elsif suffix == 'cn=monitor'
-      slapcat('(olcDatabase=monitor)').split("\n").collect do |line|
+      slapcat('-F', resource[:confdir], '(olcDatabase=monitor)').split("\n").collect do |line|
         if line =~ /^dn: /
           return line.split(' ')[1]
         end
       end
     else
-      slapcat("(olcSuffix=#{suffix})").split("\n").collect do |line|
+      slapcat('-F', resource[:confdir], "(olcSuffix=#{suffix})").split("\n").collect do |line|
         if line =~ /^dn: /
           return line.split(' ')[1]
         end

@@ -27,6 +27,12 @@ class openldap::server::config {
         variable => 'SLAPD_SERVICES',
         value    => $slapd_ldap_urls,
       }
+      shellvar { 'slapd_conf':
+        ensure   => present,
+        target   => '/etc/default/slapd',
+        variable => 'SLAPD_CONF',
+        value    => $::openldap::server::confdir,
+      }
     }
     'RedHat': {
       if versioncmp($::operatingsystemmajrelease, '6') <= 0 {

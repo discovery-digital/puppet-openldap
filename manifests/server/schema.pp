@@ -26,5 +26,6 @@ define openldap::server::schema(
     ensure   => $ensure,
     path     => $path,
     provider => $::openldap::server::provider,
+    confdir  => $::openldap::server::confdir,
   }
 }

@@ -10,8 +10,8 @@ Puppet::Type.
 
   mk_resource_methods
 
-  def self.instances
-    slapcat('(olcOverlay=*)').split("\n\n").collect do |paragraph|
+  def self.instances(confdir)
+    slapcat('-F', confdir, '(olcOverlay=*)').split("\n\n").collect do |paragraph|
       overlay = nil
       suffix = nil
       index = nil
@@ -20,7 +20,7 @@ Puppet::Type.
         case line
         when /^dn: /
           index, overlay, database = line.match(/^dn: olcOverlay=\{(\d+)\}([^,]+),olcDatabase=([^,]+),cn=config$/).captures
-          suffix = getSuffix(database)
+          suffix = getSuffix(database, confdir)
         when /^olcOverlay: /i
         when /^olc(\S+): /i
           opt_k, opt_v = line.split(': ', 2)
@@ -43,13 +43,14 @@ Puppet::Type.
         :overlay => overlay,
         :suffix  => suffix,
         :index   => index.to_i,
-        :options => options.empty? ? nil : options
+        :options => options.empty? ? nil : options,
+        :confdir => confdir
       )
     end
   end
 
   def self.prefetch(resources)
-    overlays = instances
+    overlays = instances(resources.first[1]["confdir"])
     resources.keys.each do |name|
       if provider = overlays.find{ |overlay| overlay.name == name }
         resources[name].provider = provider
@@ -116,7 +117,7 @@ Puppet::Type.
     if suffix == 'cn=config'
       return 'olcDatabase={0}config,cn=config'
     else
-      slapcat("(olcSuffix=#{suffix})").split("\n").collect do |line|
+      slapcat('-F', resource[:confdir], "(olcSuffix=#{suffix})").split("\n").collect do |line|
         if line =~ /^dn: /
           return line.split(' ')[1]
         end
@@ -124,9 +125,9 @@ Puppet::Type.
     end
   end
 
-  def self.getSuffix(database)
+  def self.getSuffix(database, confdir)
     found = false
-    slapcat("(olcDatabase=#{database})").split("\n").collect do |line|
+    slapcat('-F', confdir, "(olcDatabase=#{database})").split("\n").collect do |line|
       if line =~ /^dn: olcDatabase=#{database.gsub('{', '\{').gsub('}','\}')},/
         found = true
       end
@@ -189,8 +190,7 @@ Puppet::Type.
     `service slapd stop`
     path = default_confdir  + "/" + getPath("olcOverlay={#{@property_hash[:index]}}#{resource[:overlay]},#{getDn(resource[:suffix])}")
     File.delete(path)
-    
-    slapcat("ldap:///(objectClass=olcOverlayConfig)", getDn(resource[:suffix])).
+    slapcat('-F', resource[:confdir], "ldap:///(objectClass=olcOverlayConfig)", getDn(resource[:suffix])).
       split("\n").
       select { |line| line =~ /^dn: / }.
       select { |dn| dn.match(/^dn: olcOverlay=\{(\d+)\}(.+),#{Regexp.quote(getDn(resource[:suffix]))}$/).captures[0].to_i > @property_hash[:index] }.

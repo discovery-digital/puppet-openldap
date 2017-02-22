@@ -10,21 +10,26 @@ Puppet::Type.
 
   mk_resource_methods
 
-  def self.instances
-    items = slapcat('(objectClass=olcGlobal)')
+  def self.instances(confdir)
+    items = slapcat('-F', confdir, '(objectClass=olcGlobal)')
+    options = {}
+
+    # iterate olc options and removes any keys when it found any duplications
+    # such as olcServerID 
     items.gsub("\n ", "").split("\n").select{|e| e =~ /^olc/}.collect do |line|
       name, value = line.split(': ')
       # initialize @property_hash
       new(
         :name   => name[3, name.length],
         :ensure => :present,
-        :value  => value
+        :value  => v,
+        :confdir => confdir
       )
     end
   end
 
   def self.prefetch(resources)
-    items = instances
+    items = instances(resources.first[1]["confdir"])
     resources.keys.each do |name|
       if provider = items.find{ |item| item.name == name }
         resources[name].provider = provider

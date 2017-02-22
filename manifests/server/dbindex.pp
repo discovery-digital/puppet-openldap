@@ -25,5 +25,6 @@ define openldap::server::dbindex(
     suffix    => $suffix,
     attribute => $attribute,
     indices   => $indices,
+    confdir   => $::openldap::server::confdir,
   }
 }
