@@ -15,6 +15,7 @@ define openldap::server::globalconf(
     ensure   => $ensure,
     provider => $::openldap::server::provider,
     target   => $::openldap::server::conffile,
+    confdir  => $::openldap::server::confdir,
     value    => $value,
   }
 }

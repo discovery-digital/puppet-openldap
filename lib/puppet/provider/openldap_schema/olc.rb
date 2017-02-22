@@ -10,9 +10,9 @@ Puppet::Type.type(:openldap_schema).provide(:olc) do
 
   mk_resource_methods
 
-  def self.instances
+  def self.instances(confdir)
     schemas = []
-    slapcat('-H', 'ldap:///???(objectClass=olcSchemaConfig)', '-b', 'cn=config').split("\n\n").each do |paragraph|
+    slapcat('-F', confdir, '-H', 'ldap:///???(objectClass=olcSchemaConfig)', '-b', 'cn=config').split("\n\n").each do |paragraph|
       paragraph.split("\n").each do |line|
         if line =~ /^cn: \{/
           schemas.push line
@@ -23,7 +23,8 @@ Puppet::Type.type(:openldap_schema).provide(:olc) do
     names.map { |schema|
       new(
         :ensure => :present,
-        :name		=> schema
+        :name    => schema,
+        :confdir => confdir
       )
     }
   end
@@ -54,7 +55,7 @@ Puppet::Type.type(:openldap_schema).provide(:olc) do
   end
 
   def self.prefetch(resources)
-    existing = instances
+    existing = instances(resources.first[1]["confdir"])
     resources.keys.each do |name|
       if provider = existing.find { |r| r.name == name }
         resources[name].provider = provider

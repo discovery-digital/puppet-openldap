@@ -11,8 +11,10 @@ Puppet::Type.type(:openldap_database).provide(:olc) do
 
   mk_resource_methods
 
-  def self.instances
+  def self.instances(confdir)
     databases = slapcat(
+      '-F',
+      confdir,
       '-b',
       'cn=config',
       '-H',
@@ -113,13 +115,14 @@ Puppet::Type.type(:openldap_database).provide(:olc) do
         :mirrormode      => mirrormode,
         :syncusesubentry => syncusesubentry,
         :syncrepl        => syncrepl,
-        :limits          => limits
+        :limits          => limits,
+        :confdir         => confdir
       )
     end
   end
 
   def self.prefetch(resources)
-    databases = instances
+    databases = instances(resources.first[1]["confdir"])
     resources.keys.each do |name|
       if provider = databases.find{ |database| database.name == name }
         resources[name].provider = provider
@@ -138,6 +141,8 @@ Puppet::Type.type(:openldap_database).provide(:olc) do
     `service slapd stop`
     File.delete("#{default_confdir}/cn=config/olcDatabase={#{@property_hash[:index]}}#{backend}.ldif")
     slapcat(
+      '-F',
+      resource[:confdir],
       '-b',
       'cn=config',
       '-H',
@@ -243,6 +248,8 @@ Puppet::Type.type(:openldap_database).provide(:olc) do
     initdb if resource[:initdb] == :true
     @property_hash[:ensure] = :present
     slapcat(
+      '-F',
+      resource[:confdir],
       '-b',
       'cn=config',
       '-H',

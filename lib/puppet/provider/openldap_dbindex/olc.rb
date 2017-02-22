@@ -10,10 +10,12 @@ Puppet::Type.type(:openldap_dbindex).provide(:olc) do
 
   mk_resource_methods
 
-  def self.instances
+  def self.instances(confdir)
     # TODO: restict to bdb and hdb
     i = []
     slapcat(
+      '-F',
+      confdir,
       '-b',
       'cn=config',
       '-H',
@@ -35,7 +37,8 @@ Puppet::Type.type(:openldap_dbindex).provide(:olc) do
               :ensure    => :present,
               :attribute => attribute,
               :suffix    => suffix,
-              :indices   => indices
+              :indices   => indices,
+              :confdir   => confdir
             )
           }
         end
@@ -45,7 +48,7 @@ Puppet::Type.type(:openldap_dbindex).provide(:olc) do
   end
 
   def self.prefetch(resources)
-    dbindexes = instances
+    dbindexes = instances(resources.first[1]["confdir"])
     resources.keys.each do |name|
       if provider = dbindexes.find{ |access|
         access.attribute == resources[name][:attribute] && access.suffix == resources[name][:suffix]
@@ -57,6 +60,8 @@ Puppet::Type.type(:openldap_dbindex).provide(:olc) do
 
   def getDn(suffix)
     slapcat(
+      '-F',
+      resource[:confdir],
       '-b',
       'cn=config',
       '-H',
@@ -112,6 +117,8 @@ Puppet::Type.type(:openldap_dbindex).provide(:olc) do
   def getCurrentOlcDbIndex(suffix)
     i = []
     slapcat(
+      '-F',
+      resource[:confdir],
       '-H',
       "ldap:///#{getDn(suffix)}???(olcDbIndex=*)"
     ).split("\n\n").collect do |paragraph|

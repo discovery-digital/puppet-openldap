@@ -10,8 +10,10 @@ Puppet::Type.type(:openldap_overlay).provide(:olc) do
 
   mk_resource_methods
 
-  def self.instances
+  def self.instances(confdir)
     slapcat(
+      '-F',
+      confdir,
       '-b',
       'cn=config',
       '-H',
@@ -25,7 +27,7 @@ Puppet::Type.type(:openldap_overlay).provide(:olc) do
         case line
         when /^dn: /
           index, overlay, database = line.match(/^dn: olcOverlay=\{(\d+)\}([^,]+),olcDatabase=([^,]+),cn=config$/).captures
-          suffix = getSuffix(database)
+          suffix = getSuffix(database, confdir)
         when /^olcOverlay: /i
         when /^olc(\S+): /i
           opt_k, opt_v = line.split(': ', 2)
@@ -48,13 +50,14 @@ Puppet::Type.type(:openldap_overlay).provide(:olc) do
         :overlay => overlay,
         :suffix  => suffix,
         :index   => index.to_i,
-        :options => options.empty? ? nil : options
+        :options => options.empty? ? nil : options,
+        :confdir => confdir
       )
     end
   end
 
   def self.prefetch(resources)
-    overlays = instances
+    overlays = instances(resources.first[1]["confdir"])
     resources.keys.each do |name|
       if provider = overlays.find{ |overlay| overlay.name == name }
         resources[name].provider = provider
@@ -120,6 +123,8 @@ Puppet::Type.type(:openldap_overlay).provide(:olc) do
       return 'olcDatabase={0}config,cn=config'
     else
       slapcat(
+        '-F',
+        resource[:confdir],
         '-b',
         'cn=config',
         '-H',
@@ -132,9 +137,11 @@ Puppet::Type.type(:openldap_overlay).provide(:olc) do
     end
   end
 
-  def self.getSuffix(database)
+  def self.getSuffix(database, confdir)
     found = false
     slapcat(
+      '-F',
+      confdir,
       '-b',
       'cn=config',
       '-H',
@@ -203,7 +210,7 @@ Puppet::Type.type(:openldap_overlay).provide(:olc) do
     path = default_confdir  + "/" + getPath("olcOverlay={#{@property_hash[:index]}}#{resource[:overlay]},#{getDn(resource[:suffix])}")
     File.delete(path)
     
-    slapcat('-b', "#{getDn(resource[:suffix])}", '-H', "ldap:///???objectClass=olcOverlayConfig"
+    slapcat('-F', resource[:confdir], '-b', "#{getDn(resource[:suffix])}", '-H', "ldap:///???objectClass=olcOverlayConfig"
            ).split("\n").select { |line| line =~ /^dn: / }.select { |dn| dn.match(/^dn: olcOverlay=\{(\d+)\}(.+),#{Regexp.quote(getDn(resource[:suffix]))}$/).captures[0].to_i > @property_hash[:index] }.each { |dn|
              index, type = dn.match(/^dn: olcOverlay=\{(\d+)\}(.+),#{Regexp.quote(getDn(resource[:suffix]))}$/).captures
              index = index.to_i

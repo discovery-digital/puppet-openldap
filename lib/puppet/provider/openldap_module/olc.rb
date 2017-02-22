@@ -10,9 +10,9 @@ Puppet::Type.type(:openldap_module).provide(:olc) do
 
   mk_resource_methods
 
-  def self.instances
+  def self.instances(confdir)
     # Create dn: cn=Module{0},cn=config if not exists
-    dn = slapcat('-b', 'cn=config', '-H', 'ldap:///???(objectClass=olcModuleList)')
+    dn = slapcat('-F', confdir, '-b', 'cn=config', '-H', 'ldap:///???(objectClass=olcModuleList)')
     if dn == ''
       ldif = %Q{dn: cn=module{0},cn=config
 changetype: add
@@ -33,7 +33,8 @@ objectclass: olcModuleList
         when /^olcModuleLoad: /
           i << new(
             :ensure => :present,
-            :name   => line.match(/^olcModuleLoad: \{\d+\}([^\.]+).*$/).captures[0]
+            :name   => line.match(/^olcModuleLoad: \{\d+\}([^\.]+).*$/).captures[0],
+            :confdir => confdir
           )
 	end
       end
@@ -42,7 +43,7 @@ objectclass: olcModuleList
   end
 
   def self.prefetch(resources)
-    mods = instances
+    mods = instances(resources.first[1]["confdir"])
     resources.keys.each do |name|
       if provider = mods.find{ |mod| mod.name == name }
         resources[name].provider = provider

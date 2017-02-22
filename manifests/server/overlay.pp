@@ -26,5 +26,6 @@ define openldap::server::overlay(
     overlay  => $overlay,
     suffix   => $suffix,
     options  => $options,
+    confdir  => $::openldap::server::confdir,
   }
 }

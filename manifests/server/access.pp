@@ -26,6 +26,7 @@ define openldap::server::access(
     position => $position,
     provider => $::openldap::server::provider,
     target   => $::openldap::server::conffile,
+    confdir  => $::openldap::server::confdir,
     what     => $what,
     suffix   => $suffix,
     access   => is_array($access) ? {

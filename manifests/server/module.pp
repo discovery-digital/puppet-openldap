@@ -20,5 +20,6 @@ define openldap::server::module(
   openldap_module { $title:
     ensure   => $ensure,
     provider => $::openldap::server::provider,
+    confdir  => $::openldap::server::confdir,
   }
 }

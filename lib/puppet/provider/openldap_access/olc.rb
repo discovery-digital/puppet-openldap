@@ -10,10 +10,12 @@ Puppet::Type.type(:openldap_access).provide(:olc) do
 
   mk_resource_methods
 
-  def self.instances
+  def self.instances(confdir)
     # TODO: restict to bdb, hdb and globals
     i = []
     slapcat(
+      '-F',
+      confdir,
       '-b',
       'cn=config',
       '-H',
@@ -34,7 +36,8 @@ Puppet::Type.type(:openldap_access).provide(:olc) do
             :position => position,
             :what     => what,
             :suffix   => suffix,
-            :access   => bys.split(' by ')[1..-1]
+            :access   => bys.split(' by ')[1..-1],
+            :confdir  => confdir
           )
         end
       end
@@ -44,7 +47,7 @@ Puppet::Type.type(:openldap_access).provide(:olc) do
   end
 
   def self.prefetch(resources)
-    accesses = instances
+    accesses = instances(resources.first[1]["confdir"])
     resources.keys.each do |name|
       if provider = accesses.find{ |access|
           access.suffix == resources[name][:suffix] &&
@@ -62,6 +65,8 @@ Puppet::Type.type(:openldap_access).provide(:olc) do
       return 'olcDatabase={0}config,cn=config'
     elsif suffix == 'cn=monitor'
       slapcat(
+        '-F',
+        resource[:confdir],
         '-b',
         'cn=config',
         '-H',
@@ -73,6 +78,8 @@ Puppet::Type.type(:openldap_access).provide(:olc) do
       end
     else
       slapcat(
+        '-F',
+        resource[:confdir],
         '-b',
         'cn=config',
         '-H',

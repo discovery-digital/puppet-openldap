@@ -10,8 +10,10 @@ Puppet::Type.type(:openldap_global_conf).provide(:olc) do
 
   mk_resource_methods
 
-  def self.instances
+  def self.instances(confdir)
     items = slapcat(
+      '-F',
+      confdir,
       '-b',
       'cn=config',
       '-H',
@@ -30,7 +32,8 @@ Puppet::Type.type(:openldap_global_conf).provide(:olc) do
       i << new(
         :name   => name,
         :ensure => :present,
-        :value  => value
+        :value  => value,
+        :confdir => confdir
       )
     end
 
@@ -38,7 +41,7 @@ Puppet::Type.type(:openldap_global_conf).provide(:olc) do
   end
 
   def self.prefetch(resources)
-    items = instances
+    items = instances(resources.first[1]["confdir"])
     resources.keys.each do |name|
       if provider = items.find{ |item| item.name == name }
         resources[name].provider = provider
