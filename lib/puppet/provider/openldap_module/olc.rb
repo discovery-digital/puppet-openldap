@@ -28,7 +28,7 @@ Puppet::Type.
   end
 
   def self.instances(confdir)
-    dn = slapcat('-F', confdir, '(objectClass=olcModuleList)')
+    dn = slapcat('(objectClass=olcModuleList)', confdir)
     create_module_list() if dn.empty?
 
     i = []

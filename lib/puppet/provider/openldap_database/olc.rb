@@ -12,7 +12,7 @@ Puppet::Type.
   mk_resource_methods
 
   def self.instances(confdir)
-    databases = slapcat('-F', confdir, "(|(olcDatabase=monitor)(olcDatabase={0}config)(&(objectClass=olcDatabaseConfig)(|(objectClass=olcBdbConfig)(objectClass=olcHdbConfig)(objectClass=olcMdbConfig)(objectClass=olcMonitorConfig)(objectClass=olcRelayConfig))))")
+    databases = slapcat("(|(olcDatabase=monitor)(olcDatabase={0}config)(&(objectClass=olcDatabaseConfig)(|(objectClass=olcBdbConfig)(objectClass=olcHdbConfig)(objectClass=olcMdbConfig)(objectClass=olcMonitorConfig)(objectClass=olcRelayConfig))))", confdir)
 
     databases.split("\n\n").collect do |paragraph|
       suffix = nil
@@ -110,7 +110,6 @@ Puppet::Type.
         :syncusesubentry => syncusesubentry,
         :syncrepl        => syncrepl,
         :limits          => limits,
-        :security        => security,
         :confdir         => confdir
       )
     end
@@ -145,7 +144,7 @@ Puppet::Type.
 
     `service slapd stop`
     File.delete("#{default_confdir}/cn=config/olcDatabase={#{@property_hash[:index]}}#{backend}.ldif")
-    slapcat('-F', resource[:confdir], "(objectClass=olc#{backend.to_s.capitalize}Config)").
+    slapcat("(objectClass=olc#{backend.to_s.capitalize}Config)", resource[:confdir]).
       split("\n").
       select { |line| line =~ /^dn: / }.
       select { |dn| dn.match(/^dn: olcDatabase={(\d+)}#{backend},cn=config$/).captures[0].to_i > @property_hash[:index] }.
@@ -249,7 +248,7 @@ Puppet::Type.
     t.delete
     initdb if resource[:initdb] == :true
     @property_hash[:ensure] = :present
-    slapcat('-F', resource[:confdir], "(&(objectClass=olc#{resource[:backend].to_s.capitalize}Config)(olcSuffix=#{resource[:suffix]}))").
+    slapcat("(&(objectClass=olc#{resource[:backend].to_s.capitalize}Config)(olcSuffix=#{resource[:suffix]}))", resource[:confdir]).
       split("\n").collect do |line|
       if line =~ /^olcDatabase: /
         @property_hash[:index] = line.match(/^olcDatabase: \{(\d+)\}#{resource[:backend]}$/).captures[0]

@@ -8,7 +8,7 @@ class Puppet::Provider::Openldap < Puppet::Provider
            :original_ldapmodify => 'ldapmodify',
            :original_ldapadd    => 'ldapadd'
 
-  def self.slapcat(filter, dn = '', base = 'cn=config')
+  def self.slapcat(filter, confdir = '', dn = '', base = 'cn=config')
     arguments = [
       '-b', base,
       '-o', 'ldif-wrap=no',
@@ -21,6 +21,8 @@ class Puppet::Provider::Openldap < Puppet::Provider
         '-H', "ldap:///#{dn}???#{filter}"
       ]
     end
+
+    arguments += ['-F', confdir ] unless confdir.empty?
 
     original_slapcat(*arguments)
   end

@@ -13,10 +13,8 @@ Puppet::Type.
   def self.instances(confdir)
     # TODO: restict to bdb, hdb and globals
     i = []
-    slapcat('-F', confdir, '(olcAccess=*)').split("\n\n").collect do |paragraph|
-      access = nil
+    slapcat('(olcAccess=*)', confdir).split("\n\n").collect do |paragraph|
       suffix = nil
-      position = nil
       paragraph.gsub("\n ", '').split("\n").collect do |line|
         case line
         when /^olcDatabase: /
@@ -24,33 +22,14 @@ Puppet::Type.
         when /^olcSuffix: /
           suffix = line.split(' ')[1]
         when /^olcAccess: /
-          position, what, bys = line.match(/^olcAccess:\s+\{(\d+)\}to\s+(\S+(?:\s+filter=\S+)?(?:\s+attrs=\S+)?)(\s+by\s+.*)+$/).captures
-          bys.split(' by ')[1..-1].each { |b|
-            by, access, control = b.strip.match(/^(\S+)\s+(\S+)(\s+\S+)?$/).captures
-            i << new(
-              :name     => "to #{what} by #{by} on #{suffix}",
-              :ensure   => :present,
-              :position => position,
-              :what     => what,
-              :by       => by,
-              :suffix   => suffix,
-              :access   => access,
-              :control  => control
-            )
-          }
-          if (position.to_i + 1) == getCountOfOlcAccess(suffix)
-            islast = true
-          else
-            islast = false
-          end
+          position, what, bys = line.match(/^olcAccess:\s+\{(\d+)\}to\s+(\S+)(\s+by\s+.*)+$/).captures
           i << new(
-            :name     => "{#{position}}to #{what} #{access.join(' ')} on #{suffix}",
+            :name     => "{#{position}}to #{what} on #{suffix}",
             :ensure   => :present,
             :position => position,
             :what     => what,
-            :access   => access,
             :suffix   => suffix,
-            :islast   => islast,
+            :access   => bys.split(' by ')[1..-1],
             :confdir  => confdir
           )
         end
@@ -64,10 +43,9 @@ Puppet::Type.
     accesses = instances(resources.first[1]["confdir"])
     resources.keys.each do |name|
       if provider = accesses.find{ |access|
-        access.what == resources[name][:what] &&
-          access.by == resources[name][:by] &&
-          access.suffix == resources[name][:suffix]
-      }
+          access.suffix == resources[name][:suffix] &&
+          access.position == resources[name][:position]
+        }
         resources[name].provider = provider
       end
     end
@@ -79,13 +57,13 @@ Puppet::Type.
     elsif suffix == 'cn=config'
       return 'olcDatabase={0}config,cn=config'
     elsif suffix == 'cn=monitor'
-      slapcat('-F', resource[:confdir], '(olcDatabase=monitor)').split("\n").collect do |line|
+      slapcat('(olcDatabase=monitor)', resource[:confdir]).split("\n").collect do |line|
         if line =~ /^dn: /
           return line.split(' ')[1]
         end
       end
     else
-      slapcat('-F', resource[:confdir], "(olcSuffix=#{suffix})").split("\n").collect do |line|
+      slapcat("(olcSuffix=#{suffix})", resource[:confdir]).split("\n").collect do |line|
         if line =~ /^dn: /
           return line.split(' ')[1]
         end
@@ -102,7 +80,7 @@ Puppet::Type.
     t = Tempfile.new('openldap_access')
     t << "dn: #{getDn(resource[:suffix])}\n"
     t << "add: olcAccess\n"
-    t << "olcAccess: #{position}to #{resource[:what]} by #{resource[:by]} #{resource[:access]}\n"
+    t << "olcAccess: #{position}to #{resource[:what]} by " + resource[:access].join(' by ')
     t.close
     Puppet.debug(IO.read t.path)
     begin
@@ -131,7 +109,7 @@ Puppet::Type.
     t << "olcAccess: {#{@property_hash[:position]}}\n"
     t << "-\n"
     t << "add: olcAccess\n"
-    t << "olcAccess: {#{@property_hash[:position]}}to #{resource[:what]} by #{resource[:by]} #{resource[:access]}\n"
+    t << "olcAccess: {#{@property_hash[:position]}}to #{resource[:what]} by " + resource[:access].join(' by ')
     t.close
     Puppet.debug(IO.read t.path)
     begin

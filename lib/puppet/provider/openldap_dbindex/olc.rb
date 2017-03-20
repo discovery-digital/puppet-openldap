@@ -13,7 +13,7 @@ Puppet::Type.
   def self.instances(confdir)
     # TODO: restict to bdb and hdb
     i = []
-    slapcat('-F', confdir, '(olcDbIndex=*)').split("\n\n").collect do |paragraph|
+    slapcat('(olcDbIndex=*)', confdir).split("\n\n").collect do |paragraph|
       suffix = nil
       attrlist = nil
       indices = nil
@@ -52,7 +52,7 @@ Puppet::Type.
   end
 
   def getDn(suffix)
-    slapcat('-F', resource[:confdir], "(olcSuffix=#{suffix})").split("\n").collect do |line|
+    slapcat("(olcSuffix=#{suffix})", resource[:confdir]).split("\n").collect do |line|
       if line =~ /^dn: /
         return line.split(' ')[1]
       end
@@ -102,7 +102,7 @@ Puppet::Type.
 
   def getCurrentOlcDbIndex(suffix)
     i = []
-    slapcat('-F', resource[:confdir], "(olcDbIndex=*)", getDn(suffix)).split("\n\n").collect do |paragraph|
+    slapcat("(olcDbIndex=*)", resource[:confdir], getDn(suffix)).split("\n\n").collect do |paragraph|
       paragraph.gsub("\n ", '').split("\n").collect do |line|
         case line
         when /^olcDbIndex: /

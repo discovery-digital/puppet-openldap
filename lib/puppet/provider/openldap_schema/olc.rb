@@ -12,7 +12,7 @@ Puppet::Type.
 
   def self.instances(confdir)
     schemas = []
-    slapcat('-F', confdir, '(objectClass=olcSchemaConfig)').split("\n\n").each do |paragraph|
+    slapcat('(objectClass=olcSchemaConfig)', confdir).split("\n\n").each do |paragraph|
       paragraph.split("\n").each do |line|
         if line =~ /^cn: \{/
           schemas.push line

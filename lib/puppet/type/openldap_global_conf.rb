@@ -8,9 +8,13 @@ Puppet::Type.newtype(:openldap_global_conf) do
   newparam(:target) do
   end
 
-  newproperty(:value) do
+  newproperty(:confdir) do
+   desc "Openldap config directory."
+  end
+
+  newproperty(:value, :array_matching => :all) do
     validate do |value|
-      raise Puppet::Error, 'value should be a String or a Hash' unless [ String, Hash].include? value.class
+      raise Puppet::Error, 'value should be a String' unless [ String ].include? value.class
     end
   end
 

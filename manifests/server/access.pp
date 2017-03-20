@@ -1,12 +1,10 @@
 # See README.md for details.
 define openldap::server::access(
-  $ensure   = undef,
+  $access,
+  $ensure   = present,
   $position = undef,
   $what     = undef,
-  $by       = undef,
   $suffix   = undef,
-  $access   = undef,
-  $control  = undef,
 ) {
 
   if ! defined(Class['openldap::server']) {
@@ -30,9 +28,10 @@ define openldap::server::access(
     target   => $::openldap::server::conffile,
     confdir  => $::openldap::server::confdir,
     what     => $what,
-    by       => $by,
     suffix   => $suffix,
-    access   => $access,
-    control  => $control,
+    access   => is_array($access) ? {
+      true  => $access,
+      false => [ $access ]
+    },
   }
 }
